@@ -10,31 +10,31 @@ function Mode(props) {
 
   switch(props.mode) {
     case "setup":
-      change = <button type="button" className="btn btn-primary" onClick={props.onClick}>Done</button>
+      change = <button type="button" className="btn change btn-primary" onClick={props.onClick}>Next</button>
       mode = <button type="button" className="btn btn-primary" disabled>Setup</button>
       text = <span>1. Select initial plate positions</span>
-      run = <button type="button" className="btn run btn-danger" disabled>Run</button>
+      run = <button type="button" className="btn run btn-outline-primary" disabled>Run</button>
       break;
     case "source":
-      change = <button type="button" className="btn btn-secondary" onClick={props.onClick}>Change</button>
+      change = <button type="button" className="btn change btn-secondary" onClick={props.onClick}>Change</button>
       mode = <button type="button" className="btn btn-success" disabled>Source</button>
       text = <span>2. Select plate for pick up</span>
-      run = <button type="button" className="btn run btn-danger" disabled>Run</button>
+      run = <button type="button" className="btn run btn-outline-dark" disabled>Run</button>
       break;
     case "target":
-      change = <button type="button" className="btn btn-secondary" onClick={props.onClick}>Cancel</button>
+      change = <button type="button" className="btn change btn-secondary" onClick={props.onClick}>Cancel</button>
       mode = <button type="button" className="btn btn-danger" disabled>Target</button>
       text = <span>3. Select target position for plate</span>
-      run = <button type="button" className="btn run btn-danger" disabled>Run</button>
+      run = <button type="button" className="btn run btn-outline-secondary" disabled>Run</button>
       break;
     case "ready":
-      change = <button type="button" className="btn btn-secondary" onClick={props.onClick}>Cancel</button>
+      change = <button type="button" className="btn change btn-secondary" onClick={props.onClick}>Cancel</button>
       mode = <button type="button" className="btn btn-warning" disabled>Ready</button>
       text = <span>4. Press run to perform move</span>
-      run = <button type="button" className="btn run btn-danger">Run</button>
+      run = <button type="button" className="btn run btn-warning">Run</button>
       break;
     case "moving":
-      change = <button type="button" className="btn btn-secondary" disabled>Cancel</button>
+      change = <button type="button" className="btn change btn-secondary" disabled>Cancel</button>
       mode = <button type="button" className="btn btn-danger" disabled>Ready</button>
       text = <span>5. Press abort to stop move</span>
       run = <button type="button" className="btn run btn-danger">Abort</button>
@@ -44,12 +44,12 @@ function Mode(props) {
 
   return (
     <div className="section">
-      <div className="btn-group" role="group">
-        {change}
-        {mode}
-      </div>
+      {mode}
       {text}
-      {run}
+      <div className="btn-group right" role="group">
+        {change}
+        {run}
+      </div>
     </div>
   )
 }
@@ -96,14 +96,34 @@ class System extends React.Component {
     this.state = {
       mode: "setup", // setup, source, target, ready, moving
       plates: Array(5).fill("empty"), // empty, full, source, target
+      initial: Array(5).fill("empty"), // copy
     }
+  }
+
+  resetPlates() {
+    const initial = this.state.initial.slice()
+    this.setState({plates: initial})
   }
 
   handleChangeClick() {
     switch(this.state.mode) {
-      case "setup":     this.setState({mode: "source"});    break;
-      case "source":    this.setState({mode: "setup"});     break;
-      case "target":    this.setState({mode: "source"});    break;
+      case "setup":
+        const plates = this.state.plates.slice();
+        this.setState({initial: plates})
+        this.setState({mode: "source"});
+        break;
+      case "source":
+        this.setState({mode: "setup"});
+        this.resetPlates();
+        break;
+      case "target":
+        this.setState({mode: "source"});
+        this.resetPlates();
+        break;
+      case "ready":
+        this.setState({mode: "source"});
+        this.resetPlates();
+        break;
       default: break;
     }
   }
@@ -113,8 +133,16 @@ class System extends React.Component {
     switch(this.state.mode) {
       case "setup": plates[i] = plates[i] === "empty" ? "full" : "empty"; break;
       case "source":
-        plates[i] = plates[i] === "full" ? "source" : "empty";
-        this.setState({mode: "target"});
+        if (plates[i] === "full") {
+          plates[i] = "source";
+          this.setState({mode: "target"});
+        }
+        break;
+      case "target":
+        if (plates[i] === "empty") {
+          plates[i] = "target";
+          this.setState({mode: "ready"});
+        }
         break;
       default: break;
     }
