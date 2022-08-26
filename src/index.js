@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import graph from './graph.json';
 
 function Mode(props) {
   let change;
@@ -55,15 +56,9 @@ function Mode(props) {
 }
 
 function Position(props) {
-  switch(props.plate) {
-    case "empty":   return <button className="position empty" onClick={props.onClick}>{props.id}</button>
-    case "full":    return <button className="position full" onClick={props.onClick}>{props.id}</button>
-    case "source":  return <button className="position source" onClick={props.onClick}>{props.id}</button>
-    case "target":  return <button className="position target" onClick={props.onClick}>{props.id}</button>
-    default:    return
-  }
+  const className = props.id + " position " + props.plate;
+  return <button className={className} onClick={props.onClick}>{props.id}</button>
 }
-
 
 class Positions extends React.Component {
   render() {
@@ -89,7 +84,7 @@ class System extends React.Component {
   constructor(props) {
     super(props);
 
-    const positions = ["f1", "f2", "f3", "f4", "m1"];
+    const positions = graph.positions
     const obj = {};
 
     for (const key of positions) {
@@ -98,26 +93,26 @@ class System extends React.Component {
 
     this.state = {
       mode: "setup", // setup, source, target, ready, moving
-      plates: obj, // empty, full, source, target
+      plates: obj, // entries can be: empty, full, source, target
       initial: structuredClone(obj) // copy
     }
   }
 
   requestMove() {
-    fetch("http://localhost:5000/draw", {
+
+    const plates = this.state.plates;
+    const source = Object.keys(plates).find(key => plates[key] === "source");
+    const target = Object.keys(plates).find(key => plates[key] === "target");
+    console.log(source + " ==> " + target);
+
+    fetch("http://localhost:5000/move/"+source+"/"+target, {
       mode: "no-cors"
     })
-    .then((response) => {
-      console.log(response)
-    })
-    .catch((err) => {
-      console.log("unable to fetch -", err);
-    });
   }
 
   resetPlates() {
-    const initial = this.state.initial.slice()
-    this.setState({plates: initial})
+    const initial = structuredClone(this.state.initial);
+    this.setState({plates: initial});
   }
 
   handleChangeClick() {
@@ -175,7 +170,6 @@ class System extends React.Component {
       default: break;
     }
     this.setState({plates: plates})
-    console.log(this.state.plates)
   }
 
   render() {
