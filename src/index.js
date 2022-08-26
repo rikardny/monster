@@ -66,26 +66,20 @@ function Position(props) {
 
 
 class Positions extends React.Component {
-  renderSquare(i) {
-    return (
-      <Position
-        id={i}
-        plate={this.props.plates[i]}
-        onClick={() => this.props.handlePlateClick(i)}
-      />
-    );
-  }
-
   render() {
+    const plates = this.props.plates
     return (
       <div className="section map">
-        {this.renderSquare(0)}
-        {this.renderSquare(1)}
-        {this.renderSquare(2)}
-        {this.renderSquare(3)}
-        {this.renderSquare(4)}
+        {Object.keys(plates).map( id => {
+          return <Position
+            key={id}
+            id={id}
+            plate={plates[id]}
+            onClick={() => this.props.handlePlateClick(id)}
+          />
+        })}
       </div>
-    );
+    )
   }
 }
 
@@ -104,15 +98,12 @@ class System extends React.Component {
 
     this.state = {
       mode: "setup", // setup, source, target, ready, moving
-      plates: Array(5).fill("empty"), // empty, full, source, target
-      initial: Array(5).fill("empty"), // copy
-      plates2: obj,
-      initial2: structuredClone(obj)
+      plates: obj, // empty, full, source, target
+      initial: structuredClone(obj) // copy
     }
   }
 
   requestMove() {
-    console.log(this.state.plates)
     fetch("http://localhost:5000/draw", {
       mode: "no-cors"
     })
@@ -132,7 +123,7 @@ class System extends React.Component {
   handleChangeClick() {
     switch(this.state.mode) {
       case "setup":
-        const plates = this.state.plates.slice();
+        const plates = structuredClone(this.state.plates);
         this.setState({initial: plates})
         this.setState({mode: "source"});
         break;
@@ -166,7 +157,7 @@ class System extends React.Component {
   }
 
   handlePlateClick(id) {
-    const plates = this.state.plates.slice();
+    const plates = this.state.plates;
     switch(this.state.mode) {
       case "setup": plates[id] = plates[id] === "empty" ? "full" : "empty"; break;
       case "source":
@@ -184,6 +175,7 @@ class System extends React.Component {
       default: break;
     }
     this.setState({plates: plates})
+    console.log(this.state.plates)
   }
 
   render() {
@@ -196,7 +188,7 @@ class System extends React.Component {
         />
         <Positions
           plates={this.state.plates}
-          handlePlateClick={(i) => this.handlePlateClick(i)}
+          handlePlateClick={(id) => this.handlePlateClick(id)}
         />
       </div>
     );
