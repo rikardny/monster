@@ -1,4 +1,5 @@
 from flask import Flask
+from helper import *
 import networkx as nx
 import matplotlib.pyplot as plt
 import json
@@ -15,7 +16,8 @@ def createGraph(file):
         edges = data["edges"]
 
         for i in nodes:
-            n.append(i)
+            print(nodes[i])
+            # n.append(i, tuple(nodes[i]))
 
 
         for i in edges:
@@ -32,11 +34,34 @@ def createGraph(file):
 
 def main():
     g = createGraph("../graph.json")
+    r = Robot()
 
-    @app.get("/move/<source>/<target>")
-    def move(source, target):
+    @app.get("/move/<target>")
+    def move(target):
         print("Move from " + source + " to " + target)
         return 'Success: ' + target, 200
+
+    @app.get("/test")
+    def test():
+        status = r.jmove(0,35,-125,0,0)
+        status = r.jmove(0,45,-135,0,0)
+        return "robot moves: " + str(status), 200
+
+    @app.get("/activate")
+    def activate():
+        status = r.activate()
+        print(status)
+        return str(status), 200
+
+    @app.get("/halt")
+    def halt():
+        status = r.halt()
+        print(status)
+        return "Robot stopped: " + str(status), 200
+
+    @app.get("/print")
+    def print():
+        return str(g.nodes)
 
     @app.get("/draw")
     def draw():
