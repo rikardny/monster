@@ -1,10 +1,17 @@
-from helper import *
+import sys
+from dorna2 import Dorna
 
-r = Robot()
+r = Dorna()
+r.connect("192.168.88.252")
 
-status = r.jmove(0,35,-125,0,0)
-print(status)
-status = r.jmove(0,45,-135,0,0)
-print(status)
-
-r.stop()
+try:
+    while True:
+        status = r.jmove(rel=1, j0=20)
+        print(status)
+        status = r.jmove(rel=1, j0=-20)
+        print(status)
+except KeyboardInterrupt:
+    print("Exiting gracefully")
+    r.halt()
+    r.close()
+    sys.exit(0)

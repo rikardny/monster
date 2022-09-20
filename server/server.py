@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from helper import *
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -16,9 +16,7 @@ def createGraph(file):
         edges = data["edges"]
 
         for i in nodes:
-            print(nodes[i])
-            # n.append(i, tuple(nodes[i]))
-
+            n.append(tuple((i, {"coordinates": nodes[i]})))
 
         for i in edges:
             if i[0] == "l":
@@ -32,26 +30,57 @@ def createGraph(file):
 
     return g
 
+
+def closestNode(graph, j0, j1, j2):
+    minimum = 999999
+    node = None
+
+    for x in graph:
+        i0, i1, i2, *_ = graph.nodes[x]["coordinates"]
+        distance = (i0-j0)**2 + (i1-j1)**2 + (i2-j2)**2
+        if distance < minimum:
+            minimum = distance
+            node = x
+    return node
+
+
+def shortestPath(graph, robot, source, target):
+    string = ""
+    path = nx.shortest_path(graph, source=source, target=target)
+    for x in path:
+        j0, j1, j2, j3, j4 = graph.nodes[x]["coordinates"]
+        robot.jmove(j0, j1, j2, j3, j4)
+        string += x + ", "
+    return string
+
+
 def main():
     g = createGraph("../graph.json")
     r = Robot()
 
-    @app.get("/move/<target>")
-    def move(target):
-        print("Move from " + source + " to " + target)
-        return 'Success: ' + target, 200
+    @app.get("/move")
+    def move():
+        source = request.args.get("source")
+        target = request.args.get("target")
+        if target not in g:
+            return "Target not found", 400
+        if not source:
+            j0, j1, j2, *_ = r.get_joints()
+            source = closestNode(g, j0, j1, j2)
 
-    @app.get("/test")
-    def test():
-        status = r.jmove(0,35,-125,0,0)
-        status = r.jmove(0,45,-135,0,0)
-        return "robot moves: " + str(status), 200
+        string = shortestPath(g, r, source, target)
 
-    @app.get("/activate")
-    def activate():
-        status = r.activate()
+        return "Moving through " + string, 200
+
+    @app.get("/pickup")
+    def plate():
+        status = r.rel_lmove(0, 0, -20, 0, 0)
         print(status)
-        return str(status), 200
+        r.grip()
+        print(status)
+        status = r.rel_lmove(0, 0, 20, 0, 0)
+        print(status)
+        return "Success!", 200
 
     @app.get("/halt")
     def halt():
@@ -59,17 +88,12 @@ def main():
         print(status)
         return "Robot stopped: " + str(status), 200
 
-    @app.get("/print")
-    def print():
-        return str(g.nodes)
-
-    @app.get("/draw")
-    def draw():
-        nx.draw(g, with_labels=True)
-        plt.show()
-        plt.savefig("graph.png", format="PNG")
-        plt.close()
-        return 'Success', 200
+    @app.get("/poweroff")
+    def poweroff():
+        j0, j1, j2, *_ = r.get_joints()
+        source = closestNode(g, j0, j1, j2)
+        shortestPath(g, r, source, "0")
+        r.stop()
 
     app.run(debug=True)
 

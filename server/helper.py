@@ -3,6 +3,9 @@ from time import sleep
 import json
 
 class Robot:
+    port = "2"
+    pwm, duty, freq = "pwm"+port, "duty"+port, "freq"+port
+
     # Constructor, import ip adresses and port from json
     def __init__(self):
         with open("config.json") as json_file:
@@ -20,7 +23,7 @@ class Robot:
 
     # Robot joint move, simplified into one line
     def jmove(self, j0, j1, j2, j3, j4):
-        vel, accel, jerk = 5, 500, 2500
+        vel, accel, jerk = 10, 500, 2500
 
         arg = {"cmd": "jmove", "rel":0, "id": self.robot.rand_id(), \
                 "j0": j0, "j1": j1, "j2": j2, "j3": j3, "j4": j4,
@@ -31,7 +34,7 @@ class Robot:
 
     # Robot linear move, simplified into one line
     def lmove(self, x, y, z, a, b):
-        vel, accel, jerk = 50, 1000, 5000
+        vel, accel, jerk = 10, 1000, 5000
 
         arg = {"cmd": "lmove", "rel":0, "id": self.robot.rand_id(), \
                 "x": x, "y": y, "z": z, "a": a, "b": b, \
@@ -65,7 +68,7 @@ class Robot:
     # Grip microplate
     def grip(self):
         arg = {"cmd": "pwm", "id": self.robot.rand_id(), \
-                "pwm0": 1, "duty0": 8.0, "freq0": 50}
+                self.pwm: 1, self.duty: 8.3, self.freq: 50}
         status = self.robot.play(True, **arg)
         sleep(0.4)
         return status
@@ -73,7 +76,7 @@ class Robot:
     # Release microplate
     def release(self):
         arg = {"cmd": "pwm", "id": self.robot.rand_id(), \
-                "pwm0": 1, "duty0": 9, "freq0": 50}
+                self.pwm: 1, self.duty: 9, self.freq: 50}
         status = self.robot.play(True, **arg)
         sleep(0.4)
         return status
@@ -81,7 +84,7 @@ class Robot:
     # Fully open gripper
     def open(self):
         arg = {"cmd": "pwm", "id": self.robot.rand_id(), \
-                "pwm0": 1, "duty0": 12.5, "freq0": 50}
+                self.pwm: 1, self.duty: 12, self.freq: 50}
         status = self.robot.play(True, **arg)
         sleep(0.4)
         return status
@@ -90,4 +93,8 @@ class Robot:
         self.robot.halt(accel=None)
 
     def stop(self):
+        self.robot.set_motor(0)
         self.robot.close()
+
+    def get_joints(self):
+        return self.robot.get_all_joint()
