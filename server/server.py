@@ -1,7 +1,8 @@
 from flask import Flask, request
+from dorna2 import Dorna
 from helper import *
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
 import json
 
 app = Flask(__name__)
@@ -49,14 +50,24 @@ def shortestPath(graph, robot, source, target):
     path = nx.shortest_path(graph, source=source, target=target)
     for x in path:
         j0, j1, j2, j3, j4 = graph.nodes[x]["coordinates"]
-        robot.jmove(j0, j1, j2, j3, j4)
+        robot.jmove(j0=j0, j1=j1, j2=j2, j3=j3, j4=j4)
         string += x + ", "
     return string
 
-
-def main():
+def main(file):
     g = createGraph("../graph.json")
-    r = Robot()
+
+    with open(file) as json_file:
+        arg = json.load(json_file)
+
+    r = Dorna()
+    r.connect(arg["ip"], arg["port"])
+
+    if r.get_motor() == 0:
+        status = r.set_motor(1)
+    else:
+        status = "Motors are already on"
+    print(status)
 
     @app.get("/move")
     def move():
@@ -65,7 +76,8 @@ def main():
         if target not in g:
             return "Target not found", 400
         if not source:
-            j0, j1, j2, *_ = r.get_joints()
+            print(r.get_all_joint())
+            j0, j1, j2, *_ = r.get_all_joint()
             source = closestNode(g, j0, j1, j2)
 
         string = shortestPath(g, r, source, target)
@@ -73,12 +85,11 @@ def main():
         return "Moving through " + string, 200
 
     @app.get("/pickup")
-    def plate():
-        status = r.rel_lmove(0, 0, -20, 0, 0)
-        print(status)
-        r.grip()
-        print(status)
-        status = r.rel_lmove(0, 0, 20, 0, 0)
+    def pickup():
+        prepare(r)
+        status = r.jmove(rel=1, z=-20)
+        grip(r)
+        status = r.jmove(rel=1, z=20)
         print(status)
         return "Success!", 200
 
@@ -90,12 +101,15 @@ def main():
 
     @app.get("/poweroff")
     def poweroff():
-        j0, j1, j2, *_ = r.get_joints()
+        j0, j1, j2, *_ = r.get_all_joint()
         source = closestNode(g, j0, j1, j2)
         shortestPath(g, r, source, "0")
-        r.stop()
+        r.set_motor(0)
+        r.close()
+        return "Robot turned off!", 200
 
     app.run(debug=True)
 
+
 if __name__ == "__main__":
-    main()
+    main("config.json")

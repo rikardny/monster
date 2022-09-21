@@ -1,100 +1,29 @@
-from dorna2 import Dorna
-from time import sleep
-import json
+port = str(2)
+pwm, duty, freq = "pwm"+port, "duty"+port, "freq"+port
 
-class Robot:
-    port = "2"
-    pwm, duty, freq = "pwm"+port, "duty"+port, "freq"+port
+# Prepare for microplate pickup
+def prepare(r):
+    kwargs = {"cmd": "pwm", pwm: 1, freq: 50, duty: 9}
+    status = r.play(**kwargs)
+    return status
 
-    # Constructor, import ip adresses and port from json
-    def __init__(self):
-        with open("config.json") as json_file:
-            arg = json.load(json_file)
+# Grip microplate
+def grip(r):
+    kwargs = {"cmd": "pwm", pwm: 1, freq: 50, duty: 8.3}
+    status = r.play(**kwargs)
+    r.sleep(0.5)
+    return status
 
-        self.robot = Dorna()
-        self.robot.connect(arg["ip"], arg["port"])
+# Release microplate
+def release(r):
+    kwargs = {"cmd": "pwm", pwm: 1, freq: 50, duty: 9}
+    status = r.play(**kwargs)
+    r.sleep(0.5)
+    return status
 
-    def activate(self):
-        if self.robot.get_motor() == 0:
-            status = self.robot.set_motor(1)
-        else:
-            status = "Motors are already on"
-        return status
-
-    # Robot joint move, simplified into one line
-    def jmove(self, j0, j1, j2, j3, j4):
-        vel, accel, jerk = 10, 500, 2500
-
-        arg = {"cmd": "jmove", "rel":0, "id": self.robot.rand_id(), \
-                "j0": j0, "j1": j1, "j2": j2, "j3": j3, "j4": j4,
-                "vel": vel, "accel": accel, "jerk": jerk}
-        status = self.robot.play(True, **arg)
-        return status
-
-
-    # Robot linear move, simplified into one line
-    def lmove(self, x, y, z, a, b):
-        vel, accel, jerk = 10, 1000, 5000
-
-        arg = {"cmd": "lmove", "rel":0, "id": self.robot.rand_id(), \
-                "x": x, "y": y, "z": z, "a": a, "b": b, \
-                "vel": vel, "accel": accel, "jerk": jerk}
-        status = self.robot.play(True, **arg)
-        return status
-
-
-    # Robot joint move relative to current position, simplified into one line
-    def rel_jmove(self, j0, j1, j2, j3, j4):
-        vel, accel, jerk = 10, 500, 2500
-
-        arg = {"cmd": "jmove", "rel":1, "id": self.robot.rand_id(), \
-                "j0": j0, "j1": j1, "j2": j2, "j3": j3, "j4": j4,
-                "vel": vel, "accel": accel, "jerk": jerk}
-        status = self.robot.play(True, **arg)
-        return status
-
-
-    # Robot linear move relative to current position, simplified into one line
-    def rel_lmove(self, x, y, z, a, b):
-        vel, accel, jerk = 10, 500, 2500
-
-        arg = {"cmd": "lmove", "rel":1, "id": self.robot.rand_id(), \
-                "x": x, "y": y, "z": z, "a": a, "b": b, \
-                "vel": vel, "accel": accel, "jerk": jerk}
-        status = self.robot.play(True, **arg)
-        return status
-
-
-    # Grip microplate
-    def grip(self):
-        arg = {"cmd": "pwm", "id": self.robot.rand_id(), \
-                self.pwm: 1, self.duty: 8.3, self.freq: 50}
-        status = self.robot.play(True, **arg)
-        sleep(0.4)
-        return status
-
-    # Release microplate
-    def release(self):
-        arg = {"cmd": "pwm", "id": self.robot.rand_id(), \
-                self.pwm: 1, self.duty: 9, self.freq: 50}
-        status = self.robot.play(True, **arg)
-        sleep(0.4)
-        return status
-
-    # Fully open gripper
-    def open(self):
-        arg = {"cmd": "pwm", "id": self.robot.rand_id(), \
-                self.pwm: 1, self.duty: 12, self.freq: 50}
-        status = self.robot.play(True, **arg)
-        sleep(0.4)
-        return status
-
-    def halt(self):
-        self.robot.halt(accel=None)
-
-    def stop(self):
-        self.robot.set_motor(0)
-        self.robot.close()
-
-    def get_joints(self):
-        return self.robot.get_all_joint()
+# Fully open gripper
+def wide(r):
+    kwargs = {"cmd": "pwm", pwm: 1, freq: 50, duty: 11}
+    status = r.play(**kwargs)
+    r.sleep(5)
+    return status
