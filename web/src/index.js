@@ -98,6 +98,18 @@ class System extends React.Component {
     }
   }
 
+  ready(source, target) {
+    const plates = this.state.plates;
+    plates[source] = "empty";
+    plates[target] = "full";
+    const initial = structuredClone(plates);
+    this.setState({
+      mode: "source",
+      initial: initial,
+      plates: plates
+    })
+  }
+
   requestMove() {
 
     const plates = this.state.plates;
@@ -105,9 +117,29 @@ class System extends React.Component {
     const target = Object.keys(plates).find(key => plates[key] === "target");
     console.log(source + " ==> " + target);
 
-    fetch("http://localhost:5000/move/"+source+"/"+target, {
-      mode: "no-cors"
-    })
+    fetch("http://localhost:5000/move?target="+source)
+      .then(res => {
+        console.log(res)
+        fetch("http://localhost:5000/pickup")
+          .then(res => {
+            console.log(res)
+            fetch("http://localhost:5000/move?source="+source+"&target="+target)
+              .then(res => {
+                console.log(res)
+                  fetch("http://localhost:5000/place")
+                    .then(res => {
+                      console.log(res)
+                      this.ready(source, target)
+                    })
+              })
+          })
+      })
+  }
+
+  abortMove() {
+    fetch("http://localhost:5000/halt")
+      .then(response => response.json())
+      .then(data => console.log(data))
   }
 
   resetPlates() {
@@ -146,6 +178,7 @@ class System extends React.Component {
         break;
       case "moving":
         this.setState({mode: "ready"});
+        this.abortMove();
         break;
       default: break;
     }

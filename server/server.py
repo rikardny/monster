@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from dorna2 import Dorna
 from helper import *
 import matplotlib.pyplot as plt
@@ -104,7 +104,9 @@ def main(file):
         for node in path:
             goToNode(r, g, node)
 
-        return "Moved through nodes " + str(path), 200
+        response = jsonify("Moved through nodes " + str(path))
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 200
 
     @app.get("/pickup")
     def pickup():
@@ -112,7 +114,9 @@ def main(file):
         status = r.jmove(rel=1, z=-20)
         grip(r)
         status = r.jmove(rel=1, z=20)
-        return "Success!", 200
+        response = jsonify("Picked up plate ", str(status))
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 200
 
     @app.get("/place")
     def place():
@@ -120,13 +124,17 @@ def main(file):
         release(r)
         status = r.jmove(rel=1, z=20)
         prepare(r)
-        return "Success!", 200
+        response = jsonify("Placed down plate ", str(status))
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 200
 
     @app.get("/halt")
     def halt():
         status = r.halt()
         print(status)
-        return "Robot stopped: " + str(status), 200
+        response = jsonify("Robot stopped: ", str(status))
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 200
 
     @app.get("/poweroff")
     def poweroff():
