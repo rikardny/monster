@@ -9,50 +9,66 @@ app = Flask(__name__)
 
 def createGraph(file):
     g = nx.Graph()
-    n, l, j = [], [], []
+    n, e = [], []
 
     with open (file, "r") as json_file:
         data = json.load(json_file)
-        nodes = data["nodes"]
+        jnodes = data["joint nodes"]
+        lnodes = data["linear nodes"]
         edges = data["edges"]
 
-        for i in nodes:
-            n.append(tuple((i, {"coordinates": nodes[i]})))
+        for i in jnodes:
+            n.append(tuple((i, {"type": "joint", "coordinates": jnodes[i]})))
+
+        for i in lnodes:
+            n.append(tuple((i, {"type": "linear", "coordinates": lnodes[i]})))
 
         for i in edges:
-            if i[0] == "l":
-                l.append(tuple(i[1:3]))
-            if i[0] == "j":
-                j.append(tuple(i[1:3]))
+            e.append(i)
 
     g.add_nodes_from(n)
-    g.add_edges_from(l, type="line")
-    g.add_edges_from(j, type="joint")
+    g.add_edges_from(e)
 
     return g
 
 
-def closestNode(graph, j0, j1, j2):
-    minimum = 999999
-    node = None
+def goToNode(robot, graph, node):
+    if graph.nodes[node]["type"] == "joint":
+        j0, j1, j2, j3, j4 = graph.nodes[node]["coordinates"]
+        robot.jmove(rel=0, j0=j0, j1=j1, j2=j2, j3=j3, j4=j4)
+        return 0
+    if graph.nodes[node]["type"] == "linear":
+        x, y, z, a, b = graph.nodes[node]["coordinates"]
+        robot.jmove(rel=0, x=x, y=y, z=z, a=a, b=b)
+        return 0
+    else:
+        print("Requested move to incorrect node...")
+        return -1
 
-    for x in graph:
-        i0, i1, i2, *_ = graph.nodes[x]["coordinates"]
-        distance = (i0-j0)**2 + (i1-j1)**2 + (i2-j2)**2
-        if distance < minimum:
-            minimum = distance
-            node = x
-    return node
 
+def closestNode(robot, graph):
+    closest = None
+    minimum = 9999999
+    j0, j1, j2, *_ = robot.get_all_joint()
+    x, y, z, *_ = robot.get_all_pose()
+    for node in graph:
+        if graph.nodes[node]["type"] == "joint":
+            i0, i1, i2, *_ = graph.nodes[node]["coordinates"]
+            distance = (i0-j0)**2 + (i1-j1)**2 + (i2-j2)**2
+            if distance < minimum:
+                minimum = distance
+                closest = node
+        if graph.nodes[node]["type"] == "linear":
+            u, v, w, *_ = graph.nodes[node]["coordinates"]
+            distance = (u-x)**2 + (v-y)**2 + (w-z)**2
+            if distance < minimum:
+                minimum = distance
+                closest = node
+    if minimum > 50**2:
+        return None
+    else:
+        return closest
 
-def shortestPath(graph, robot, source, target):
-    string = ""
-    path = nx.shortest_path(graph, source=source, target=target)
-    for x in path:
-        j0, j1, j2, j3, j4 = graph.nodes[x]["coordinates"]
-        robot.jmove(j0=j0, j1=j1, j2=j2, j3=j3, j4=j4)
-        string += x + ", "
-    return string
 
 def main(file):
     g = createGraph("../graph.json")
@@ -74,15 +90,21 @@ def main(file):
         source = request.args.get("source")
         target = request.args.get("target")
         if target not in g:
+            print("400 - Target not found")
             return "Target not found", 400
         if not source:
-            print(r.get_all_joint())
-            j0, j1, j2, *_ = r.get_all_joint()
-            source = closestNode(g, j0, j1, j2)
+            source = closestNode(r, g)
+            if source is None:
+                return "Too far from node", 400
+            else:
+                goToNode(r, g, source)
 
-        string = shortestPath(g, r, source, target)
+        path = nx.shortest_path(g, source=source, target=target)
+        print("shortest path from " + str(source) + " to " + str(target) + " is: "+ str(path))
+        for node in path:
+            goToNode(r, g, node)
 
-        return "Moving through " + string, 200
+        return "Moved through nodes " + str(path), 200
 
     @app.get("/pickup")
     def pickup():
@@ -90,7 +112,14 @@ def main(file):
         status = r.jmove(rel=1, z=-20)
         grip(r)
         status = r.jmove(rel=1, z=20)
-        print(status)
+        return "Success!", 200
+
+    @app.get("/place")
+    def place():
+        status = r.jmove(rel=1, z=-20)
+        release(r)
+        status = r.jmove(rel=1, z=20)
+        prepare(r)
         return "Success!", 200
 
     @app.get("/halt")
@@ -101,15 +130,37 @@ def main(file):
 
     @app.get("/poweroff")
     def poweroff():
-        j0, j1, j2, *_ = r.get_all_joint()
-        source = closestNode(g, j0, j1, j2)
-        shortestPath(g, r, source, "0")
-        r.set_motor(0)
+        target = "safe"
+        source = closestNode(r, g)
+        if source is None:
+            return "Too far from node", 400
+        else:
+            goToNode(r, g, source)
+
+        path = nx.shortest_path(g, source=source, target=target)
+        print("shortest path from " + str(source) + " to " + str(target) + " is: "+ str(path))
+        for node in path:
+            goToNode(r, g, node)
+
+        # r.set_motor(0)
         r.close()
         return "Robot turned off!", 200
 
-    app.run(debug=True)
+    @app.get("/draw")
+    def draw():
+        nx.draw(g, with_labels=True)
+        plt.show()
+        plt.savefig("graph.png", format="PNG")
+        plt.close()
+        return 'Success', 200
 
+    @app.get("/test")
+    def test():
+        node = closestNode(r, g)
+        return node, 200
+
+
+    app.run(debug=True)
 
 if __name__ == "__main__":
     main("config.json")
