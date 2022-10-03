@@ -7,7 +7,7 @@ sudo apt-get install -y nodejs
 cd ~/Desktop/monster
 
 git clone https://github.com/dorna-robotics/dorna2-python.git
-cd dorna2
+cd dorna2-python
 sudo python3 setup.py install --force
 
 cd ../server
