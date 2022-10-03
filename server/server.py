@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from dorna2 import Dorna
 from helper import *
-import matplotlib.pyplot as plt
 import networkx as nx
 import json
 
