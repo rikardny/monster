@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from dorna2 import Dorna
 from helper import *
 import networkx as nx
+import socket
 import json
 
 app = Flask(__name__)
@@ -72,11 +73,13 @@ def closestNode(robot, graph):
 def main(file):
     g = createGraph("../graph.json")
 
+    hostname = socket.gethostname()
+
     with open(file) as json_file:
         arg = json.load(json_file)
 
     r = Dorna()
-    r.connect(arg["ip"], arg["port"])
+    r.connect(arg[hostname], arg["port"])
 
     if r.get_motor() == 0:
         status = r.set_motor(1)
