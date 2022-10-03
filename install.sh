@@ -8,7 +8,7 @@ cd ~/Desktop/monster
 
 git clone https://github.com/dorna-robotics/dorna2-python.git
 cd dorna2
-python setup.py install --force
+sudo python3 setup.py install --force
 
 cd ../server
 pip install flask networkx
